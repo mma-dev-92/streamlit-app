@@ -15,7 +15,7 @@ class ClusteringMethods(enum.Enum):
     dbscan = 'DBSCAN'
 
 
-def clusteing_results_plot(X: np.ndarray, labels: np.ndarray, dataset_name: str, centroids: np.ndarray | None = None) -> plt.Figure:
+def clusteing_results_plot(X: np.ndarray, labels: np.ndarray, plot_title: str, centroids: np.ndarray | None = None) -> plt.Figure:
     fig, ax = plt.subplots()
     out = labels == -1
     plt.scatter(X[~out][:, 0], X[~out][:, 1], c=labels[~out], alpha=0.5, s=100, cmap='viridis')
@@ -23,7 +23,7 @@ def clusteing_results_plot(X: np.ndarray, labels: np.ndarray, dataset_name: str,
         plt.scatter(X[out][:, 0], X[out][:, 1], c='gray', alpha=0.5, s=100, label='outliers')
     if centroids is not None:
         ax.scatter(centroids[:, 0], centroids[:, 1], c='blue', marker='X', s=100)
-    ax.set_title(f'{dataset_name.title()} Partition')
+    ax.set_title(f'{plot_title.title()}')
     if X[out].size > 0:
         plt.legend()
     fig.tight_layout()
@@ -53,26 +53,26 @@ def compute_dbscan(X: np.ndarray) -> np.ndarray:
 
 
 @st.cache_data
-def kmeans_plot(data: tuple[np.ndarray, np.ndarray], dataset_name: str) -> plt.Figure:
+def kmeans_plot(data: tuple[np.ndarray, np.ndarray], plot_title: str) -> plt.Figure:
     X, initial_labels = data
     n_clusters = len(np.unique(initial_labels))
     labels, centroids = compute_kmeans(X, n_clusters)
-    return clusteing_results_plot(X, labels, dataset_name, centroids)
+    return clusteing_results_plot(X, labels, plot_title, centroids)
 
 
 @st.cache_data
-def hierarchical_plot(data: tuple[np.ndarray, np.ndarray], dataset_name: str) -> plt.Figure:
+def hierarchical_plot(data: tuple[np.ndarray, np.ndarray], plot_title: str) -> plt.Figure:
     X, initial_labels = data
     n_clusters = len(np.unique(initial_labels))
     labels = compute_hierarchical(X, n_clusters)
-    return clusteing_results_plot(X, labels, dataset_name)
+    return clusteing_results_plot(X, labels, plot_title)
 
 
 @st.cache_data
-def dbscan_plot(data: tuple[np.ndarray, np.ndarray], dataset_name: str) -> plt.Figure:
+def dbscan_plot(data: tuple[np.ndarray, np.ndarray], plot_title: str) -> plt.Figure:
     X, _ = data
     labels = compute_dbscan(X)
-    return clusteing_results_plot(X, labels, dataset_name)
+    return clusteing_results_plot(X, labels, plot_title)
 
 
 _plot_rendering_methods = {
@@ -82,14 +82,10 @@ _plot_rendering_methods = {
 }
 
 
-def render_plot(method: ClusteringMethods, datasets: dict[str, tuple[np.ndarray, np.ndarray]]) -> None:
-    st.header(f'{method.value.title()} Clustering Method', divider='gray')
-    grid = make_grid(1, 4)
-    for idx, (dataset_name, data) in enumerate(datasets.items()):
-        grid[0][idx].pyplot(_plot_rendering_methods[method](data, dataset_name))
-
-
 def render_methods() -> None:
     datasets = get_datasets()
-    for method in ClusteringMethods:
-        render_plot(method, datasets)
+    for dataset_name in datasets:
+        st.header(f'Dataset {dataset_name.title()} Results')
+        grid = make_grid(1, 4)
+        for idx, method in enumerate(ClusteringMethods):
+            grid[0][idx].pyplot(_plot_rendering_methods[method](datasets[dataset_name], method.name))
