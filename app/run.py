@@ -6,7 +6,7 @@ from config import Pages, render_functions
 
 def set_page_config() -> None:
     st.set_page_config(
-        initial_sidebar_state="collapsed", 
+        # initial_sidebar_state="collapsed", 
         page_title="Review of Selected Clustering Methods",
         layout="wide",
     )
