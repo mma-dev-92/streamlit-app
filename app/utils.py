@@ -78,7 +78,7 @@ def nested_clusters(n_samples: int, seed: int) -> tuple[np.ndarray, np.ndarray]:
 
 
 @st.cache_data
-def get_datasets(n_samples: int = 1000, seed: int | None = None) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+def get_datasets(n_samples: int = 2000, seed: int | None = None) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     """
     Creates normalized datasets of shape (n_samples, n_features)
     """
@@ -98,6 +98,81 @@ def get_datasets(n_samples: int = 1000, seed: int | None = None) -> dict[str, tu
     return result
 
 
+@st.cache_data
+def get_clustering_parameters() -> dict[str, dict]:
+    """Set of parameters for each dataset and for each clustering method."""
+    return {
+        'moons': {
+            Method.kmeans.name: {
+                'k': 4
+            },
+            Method.hierarchical.name: {
+                'method': 'ward',
+                'k': 2,
+            },
+            Method.dbscan.name: {
+                'min_pts': 5,
+                'eps': 0.1,
+            },
+        },
+        'rings': {
+            Method.kmeans.name: {'k': 6},
+            Method.hierarchical.name: {
+                'method': 'ward',
+                'k': 2,
+            },
+            Method.dbscan.name: {
+                'min_pts': 7,
+                'eps': 0.18,
+            },
+        },
+        'blobs': {
+            Method.kmeans.name: {'k': 4},
+            Method.hierarchical.name: {
+                'method': 'ward',
+                'k': 8,
+            },
+            Method.dbscan.name: {
+                'min_pts': 4,
+                'eps': 0.1,
+            },
+        },
+        'uniformly distributed': {
+            Method.kmeans.name: {'k': 4},
+            Method.hierarchical.name: {
+                'method': 'ward',
+                'k': 4,
+            },
+            Method.dbscan.name: {
+                'min_pts': 6,
+                'eps': 0.13,
+            },
+        },
+        'different densities': {
+            Method.kmeans.name: {'k': 4},
+            Method.hierarchical.name: {
+                'method': 'ward',
+                'k': 5,
+            },
+            Method.dbscan.name: {
+                'min_pts': 4,
+                'eps': 0.105,
+            },
+        },
+        'nested clusters': {
+            Method.kmeans.name: {'k': 2},
+            Method.hierarchical.name: {
+                'method': 'ward',
+                'k': 4,
+            },
+            Method.dbscan.name: {
+                'min_pts': 4,
+                'eps': 0.09,
+            },
+        },
+    }
+
+
 def make_grid(cols: int, rows: int) -> list:
     grid = [0] * cols
     for i in range(cols):
@@ -107,27 +182,25 @@ def make_grid(cols: int, rows: int) -> list:
 
 
 @st.cache_data
-def compute_kmeans(data: tuple[np.ndarray, np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
-    X, y = data
-    n_clusters = np.unique(y).size
-    kmeans = KMeans(n_clusters=n_clusters, random_state=0)
+def compute_kmeans(data: tuple[np.ndarray, np.ndarray], params: dict) -> tuple[np.ndarray, np.ndarray]:
+    X, _ = data
+    kmeans = KMeans(n_clusters=params['k'], random_state=0)
     labels = kmeans.fit_predict(X)
     centriods = kmeans.cluster_centers_
     return labels, centriods
 
 
 @st.cache_data
-def compute_hierarchical(data: tuple[np.ndarray, np.ndarray]) -> np.ndarray:
-    X, y = data
-    n_clusters = np.unique(y).size
-    hc = AgglomerativeClustering(n_clusters=n_clusters, metric='euclidean', linkage='ward')
+def compute_hierarchical(data: tuple[np.ndarray, np.ndarray], params: dict) -> np.ndarray:
+    X, _ = data
+    hc = AgglomerativeClustering(n_clusters=params['k'], metric='euclidean', linkage=params['method'])
     return hc.fit_predict(X)
 
 
 @st.cache_data
-def compute_dbscan(data: tuple[np.ndarray, np.ndarray]) -> np.ndarray:
+def compute_dbscan(data: tuple[np.ndarray, np.ndarray], params: dict) -> np.ndarray:
     X, _ = data
-    dbscan = DBSCAN(eps=0.2, min_samples=5)
+    dbscan = DBSCAN(eps=params['eps'], min_samples=params['min_pts'])
     return dbscan.fit_predict(X)
 
 
@@ -139,10 +212,10 @@ _metric_funs = {
 
 
 @st.cache_data
-def compute_metric(data: tuple[np.ndarray, np.ndarray], metric: Metric) -> dict[str, float]:
+def compute_metric(data: tuple[np.ndarray, np.ndarray], metric: Metric, params: dict) -> dict[str, float]:
     _, y = data
     return {
-        Method.kmeans.value: _metric_funs[metric](labels_true=y, labels_pred=compute_kmeans(data)[0]),
-        Method.hierarchical.value: _metric_funs[metric](labels_true=y, labels_pred=compute_hierarchical(data)),
-        Method.dbscan.value: _metric_funs[metric](labels_true=y, labels_pred=compute_dbscan(data))
+        Method.kmeans.value: _metric_funs[metric](labels_true=y, labels_pred=compute_kmeans(data, params[Method.kmeans.name])[0]),
+        Method.hierarchical.value: _metric_funs[metric](labels_true=y, labels_pred=compute_hierarchical(data, params[Method.hierarchical.name])),
+        Method.dbscan.value: _metric_funs[metric](labels_true=y, labels_pred=compute_dbscan(data, params[Method.dbscan.name]))
     }

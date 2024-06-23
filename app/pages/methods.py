@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import streamlit as st
 
 from pages.datasets import dataset_scatter_plot, get_datasets
-from utils import Method, compute_dbscan, compute_hierarchical, compute_kmeans, make_grid 
+from utils import Method, compute_dbscan, compute_hierarchical, compute_kmeans, get_clustering_parameters, make_grid 
 
 
 def clusteing_results_plot(X: np.ndarray, labels: np.ndarray, plot_title: str, centroids: np.ndarray | None = None) -> plt.Figure:
@@ -22,21 +22,21 @@ def clusteing_results_plot(X: np.ndarray, labels: np.ndarray, plot_title: str, c
 
 
 @st.cache_data
-def kmeans_plot(data: tuple[np.ndarray, np.ndarray], plot_title: str) -> plt.Figure:
+def kmeans_plot(data: tuple[np.ndarray, np.ndarray], plot_title: str, _params: dict) -> plt.Figure:
     X = data[0]
-    labels, centroids = compute_kmeans(data)
+    labels, centroids = compute_kmeans(data, _params)
     return clusteing_results_plot(X, labels, plot_title, centroids)
 
 
 @st.cache_data
-def hierarchical_plot(data: tuple[np.ndarray, np.ndarray], plot_title: str) -> plt.Figure:
-    X, labels = data[0], compute_hierarchical(data)
+def hierarchical_plot(data: tuple[np.ndarray, np.ndarray], plot_title: str, _params: dict) -> plt.Figure:
+    X, labels = data[0], compute_hierarchical(data, _params)
     return clusteing_results_plot(X, labels, plot_title)
 
 
 @st.cache_data
-def dbscan_plot(data: tuple[np.ndarray, np.ndarray], plot_title: str) -> plt.Figure:
-    X, labels = data[0], compute_dbscan(data)
+def dbscan_plot(data: tuple[np.ndarray, np.ndarray], plot_title: str, _params: dict) -> plt.Figure:
+    X, labels = data[0], compute_dbscan(data, _params)
     return clusteing_results_plot(X, labels, plot_title)
 
 
@@ -49,9 +49,10 @@ _plot_rendering_methods = {
 
 def render_methods() -> None:
     datasets = get_datasets()
+    params = get_clustering_parameters()
     for dataset_name in datasets:
         st.header(f'Dataset "{dataset_name.title()}"')
         grid = make_grid(1, len(Method) + 1)
         grid[0][0].pyplot(dataset_scatter_plot(datasets[dataset_name], title='Ground of Truth'))
         for idx, method in enumerate(Method):
-            grid[0][idx + 1].pyplot(_plot_rendering_methods[method](datasets[dataset_name], method.name))
+            grid[0][idx + 1].pyplot(_plot_rendering_methods[method](datasets[dataset_name], method.name, params[dataset_name][method.name]))
